@@ -117,28 +117,40 @@ const handleRenderSaveBtn = () => {
 };
 
 // Render the list of note titles
-const renderNoteList = async (notes) => {
-  let jsonNotes = await notes.json();
-  noteList.innerHTML = "";
+const renderNoteList = async () => {
+  try {
+    const notes = await getNotes();
+    const jsonNotes = await notes.json();
 
-  if (jsonNotes.length === 0) {
-    const liEl = document.createElement('li');
-    liEl.classList.add('list-group-item');
-    liEl.textContent = 'No saved Notes';
-    noteList.append(liEl);
-  } else {
-    jsonNotes.forEach((note) => {
+    noteList.innerHTML = '';
+
+    if (jsonNotes.length === 0) {
       const liEl = document.createElement('li');
       liEl.classList.add('list-group-item');
-      liEl.setAttribute('data-note', JSON.stringify(note));
-      liEl.innerHTML = `<span>${note.title}</span>
-        <i class="fas fa-trash-alt float-right text-danger delete-note"></i>`;
+      liEl.textContent = 'No saved Notes';
       noteList.append(liEl);
-    });
+    } else {
+      jsonNotes.forEach((note) => {
+        const liEl = document.createElement('li');
+        liEl.classList.add('list-group-item');
+        liEl.setAttribute('data-note', JSON.stringify(note));
+        liEl.innerHTML = `<span>${note.title}</span>
+          <i class="fas fa-trash-alt float-right text-danger delete-note"></i>`;
+        noteList.append(liEl);
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching notes:', error);
   }
 };
 
-const getAndRenderNotes = () => getNotes().then(renderNoteList);
+const getAndRenderNotes = () => {
+  getNotes()
+    .then(() => renderNoteList())
+    .catch((error) => {
+      console.error('Error getting notes:', error);
+    });
+};
 
 if (window.location.pathname === '/notes') {
   saveNoteBtn.addEventListener('click', handleNoteSave);

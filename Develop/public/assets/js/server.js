@@ -1,28 +1,43 @@
 const express = require('express');
-const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const PORT = 3000; // Specify the port you want your server to listen on
+const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.urlencoded({ extended: false }));
+app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cors());
 
-// Routes
+// HTML Routes
+app.get('/notes', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'notes.html'));
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// API Routes
 app.get('/api/notes', (req, res) => {
-  // Handle the request and send a response
-  res.json({ message: 'This is the notes API endpoint' });
+  const notes = JSON.parse(fs.readFileSync(path.join(__dirname, 'db', 'db.json'), 'utf8'));
+  res.json(notes);
 });
 
 app.post('/api/notes', (req, res) => {
-  // Handle the request and send a response
-  const note = req.body;
-  console.log('Received a new note:', note);
-  res.json({ message: 'Note saved successfully' });
+  const newNote = req.body;
+  newNote.id = uuidv4();
+
+  const notes = JSON.parse(fs.readFileSync(path.join(__dirname, 'db', 'db.json'), 'utf8'));
+  notes.push(newNote);
+
+  fs.writeFileSync(path.join(__dirname, 'db', 'db.json'), JSON.stringify(notes));
+
+  res.json(newNote);
 });
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server listening on PORT ${PORT}`);
 });
