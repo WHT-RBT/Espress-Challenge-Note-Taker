@@ -5,27 +5,23 @@ let newNoteBtn;
 let noteList;
 
 if (window.location.pathname === '/notes') {
-  noteTitle = document.getElementById('note-title');
-  noteText = document.getElementById('note-text');
-  saveNoteBtn = document.getElementById('save-note');
-  newNoteBtn = document.getElementById('new-note');
-  noteList = document.querySelector('.list-group');
+  noteTitle = document.querySelector('.note-title');
+  noteText = document.querySelector('.note-textarea');
+  saveNoteBtn = document.querySelector('.save-note');
+  newNoteBtn = document.querySelector('.new-note');
+  noteList = document.querySelector('.list-container .list-group');
 }
 
-// Show an element
 const show = (elem) => {
   elem.style.display = 'inline';
 };
 
-// Hide an element
 const hide = (elem) => {
   elem.style.display = 'none';
 };
 
-// activeNote is used to keep track of the note in the textarea
 let activeNote = {};
 
-// get request for the notes
 const getNotes = () =>
   fetch('/api/notes', {
     method: 'GET',
@@ -34,7 +30,6 @@ const getNotes = () =>
     },
   });
 
-// post request for the notes
 const saveNote = (note) =>
   fetch('/api/notes', {
     method: 'POST',
@@ -44,7 +39,6 @@ const saveNote = (note) =>
     body: JSON.stringify(note),
   });
 
-// delete request for the notes
 const deleteNote = (id) =>
   fetch(`/api/notes/${id}`, {
     method: 'DELETE',
@@ -53,7 +47,6 @@ const deleteNote = (id) =>
     },
   });
 
-// function to hide the save btn until there is a note added to save
 const renderActiveNote = () => {
   hide(saveNoteBtn);
 
@@ -70,54 +63,43 @@ const renderActiveNote = () => {
   }
 };
 
-// save note
 const handleNoteSave = () => {
   const newNote = {
     title: noteTitle.value,
     text: noteText.value,
   };
-  saveNote(newNote).then(() => {
-    getAndRenderNotes();
-    renderActiveNote();
-  });
+
+  saveNote(newNote)
+    .then(() => {
+      activeNote = {};
+      renderActiveNote();
+      getAndRenderNotes(); // Fetch and render the updated note list
+    });
 };
 
-// Delete the clicked note
 const handleNoteDelete = (e) => {
-  // Prevents the click listener for the list from being called when the button inside of it is clicked
   e.stopPropagation();
 
   const note = e.target.parentElement;
-  const noteId = note.getAttribute('data-note-id');
+  const noteId = JSON.parse(note.dataset.note).id;
 
   if (activeNote.id === noteId) {
     activeNote = {};
   }
 
-  deleteNote(noteId).then(() => {
-    getAndRenderNotes();
-    renderActiveNote();
-  });
+  deleteNote(noteId)
+    .then(() => {
+      renderActiveNote();
+      getAndRenderNotes(); // Fetch and render the updated note list
+    });
 };
 
-// Sets the activeNote and displays it
 const handleNoteView = (e) => {
   e.preventDefault();
-  const note = e.target.parentElement;
-  const noteId = note.getAttribute('data-note-id');
-  const noteTitle = note.querySelector('.note-title').innerText;
-  const noteText = note.querySelector('.note-text').innerText;
-
-  activeNote = {
-    id: noteId,
-    title: noteTitle,
-    text: noteText,
-  };
-
+  activeNote = JSON.parse(e.target.parentElement.dataset.note);
   renderActiveNote();
 };
 
-// Sets the activeNote to an empty object and allows the user to enter a new note
 const handleNewNoteView = () => {
   activeNote = {};
   renderActiveNote();
@@ -131,54 +113,46 @@ const handleRenderSaveBtn = () => {
   }
 };
 
-// Render the list of note titles
-const renderNoteList = async (notes) => {
-  const jsonNotes = await notes.json();
+const renderNoteList = (notes) => {
   noteList.innerHTML = '';
 
-  if (jsonNotes.length === 0) {
-    const listItem = document.createElement('li');
-    listItem.classList.add('list-group-item');
-    listItem.innerText = 'No saved notes';
-    noteList.appendChild(listItem);
-  } else {
-    jsonNotes.forEach((note) => {
-      const listItem = document.createElement('li');
-      listItem.classList.add('list-group-item');
-      listItem.setAttribute('data-note-id', note.id);
+  notes.forEach((note) => {
+    const liEl = document.createElement('li');
+    liEl.classList.add('list-group-item');
+    liEl.dataset.note = JSON.stringify(note);
 
-      const noteTitle = document.createElement('h5');
-      noteTitle.classList.add('note-title');
-      noteTitle.innerText = note.title;
+    const spanEl = document.createElement('span');
+    spanEl.classList.add('list-item-title');
+    spanEl.textContent = note.title;
+    spanEl.addEventListener('click', handleNoteView);
 
-      const noteText = document.createElement('p');
-      noteText.classList.add('note-text');
-      noteText.innerText = note.text;
+    const deleteBtnEl = document.createElement('i');
+    deleteBtnEl.classList.add(
+      'fas',
+      'fa-trash-alt',
+      'float-right',
+      'text-danger',
+      'delete-note'
+    );
+    deleteBtnEl.addEventListener('click', handleNoteDelete);
 
-      listItem.appendChild(noteTitle);
-      listItem.appendChild(noteText);
-      listItem.addEventListener('click', handleNoteView);
-
-      const deleteBtn = document.createElement('i');
-      deleteBtn.classList.add('fas', 'fa-trash-alt', 'float-right', 'text-danger', 'delete-note');
-      deleteBtn.addEventListener('click', handleNoteDelete);
-
-      listItem.appendChild(deleteBtn);
-      noteList.appendChild(listItem);
-    });
-  }
+    liEl.appendChild(spanEl);
+    liEl.appendChild(deleteBtnEl);
+    noteList.appendChild(liEl);
+  });
 };
 
-// Gets notes from the db and renders them to the sidebar
 const getAndRenderNotes = () => {
-  getNotes().then(renderNoteList);
+  getNotes()
+    .then((response) => response.json())
+    .then((data) => renderNoteList(data));
 };
 
 if (window.location.pathname === '/notes') {
   saveNoteBtn.addEventListener('click', handleNoteSave);
   newNoteBtn.addEventListener('click', handleNewNoteView);
-  noteTitle.addEventListener('keyup', handleRenderSaveBtn);
-  noteText.addEventListener('keyup', handleRenderSaveBtn);
+  noteTitle.addEventListener('input', handleRenderSaveBtn);
+  noteText.addEventListener('input', handleRenderSaveBtn);
 }
 
 getAndRenderNotes();

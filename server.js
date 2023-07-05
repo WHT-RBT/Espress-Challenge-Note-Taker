@@ -1,52 +1,78 @@
+const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const express = require('express');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Allows all notes to have a unique ID
-const { v4: uuidv4 } = require('uuid');
-
-app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(express.static('public'));
 
 // API Routes
-// GET /api/notes should read the db.json file and return all saved notes as JSON.
 app.get('/api/notes', (req, res) => {
-  fs.readFile('./db/db.json', (err, data) => {
-    if (err) throw err;
-    const dbData = JSON.parse(data);
-    res.json(dbData);
+  const dbFilePath = path.join(__dirname, 'Develop', 'db', 'db.json');
+  fs.readFile(dbFilePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to read notes from the database.' });
+    }
+    const notes = JSON.parse(data);
+    res.json(notes);
   });
 });
 
-// POST
 app.post('/api/notes', (req, res) => {
-  fs.readFile('./db/db.json', (err, data) => {
-    if (err) throw err;
-    const dbData = JSON.parse(data);
+  const dbFilePath = path.join(__dirname, 'Develop', 'db', 'db.json');
+  fs.readFile(dbFilePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to read notes from the database.' });
+    }
+    const notes = JSON.parse(data);
+
     const newNote = {
-      id: uuidv4(),
+      id: generateUniqueId(),
       title: req.body.title,
       text: req.body.text,
     };
-    dbData.push(newNote);
-    fs.writeFile('./db/db.json', JSON.stringify(dbData), (err) => {
-      if (err) throw err;
+
+    notes.push(newNote);
+
+    fs.writeFile(dbFilePath, JSON.stringify(notes), (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed to save the note to the database.' });
+      }
       res.json(newNote);
     });
   });
 });
 
-// DELETE
 app.delete('/api/notes/:id', (req, res) => {
-  fs.readFile('./db/db.json', (err, data) => {
-    if (err) throw err;
-    const dbData = JSON.parse(data);
-    const newDb = dbData.filter((note) => note.id !== req.params.id);
-    fs.writeFile('./db/db.json', JSON.stringify(newDb), (err) => {
-      if (err) throw err;
-      res.sendStatus(200);
+  const dbFilePath = path.join(__dirname, 'Develop', 'db', 'db.json');
+  fs.readFile(dbFilePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to read notes from the database.' });
+    }
+    const notes = JSON.parse(data);
+
+    const noteId = req.params.id;
+    const index = notes.findIndex((note) => note.id === noteId);
+
+    if (index === -1) {
+      return res.status(404).json({ error: 'Note not found.' });
+    }
+
+    notes.splice(index, 1);
+
+    fs.writeFile(dbFilePath, JSON.stringify(notes), (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed to delete the note from the database.' });
+      }
+      res.sendStatus(204);
     });
   });
 });
@@ -57,10 +83,10 @@ app.get('/notes', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Develop', 'public', 'index.html'));
-  });
-  
+  res.sendFile(path.join(__dirname, 'Develop', 'public', 'index.html'));
+});
 
+// Start the server
 app.listen(PORT, () => {
-  console.log(`App listening on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
