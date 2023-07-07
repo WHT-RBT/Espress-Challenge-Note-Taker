@@ -45,7 +45,8 @@ The following images show the web application's appearance and functionality:
 
 ![Notes Page](<Develop/public/assets/images/Note Page.png>)
 
-Existing notes are listed in the left-hand column with empty fields on the right-hand side for the new note’s title and text.
+![Entered Notes](<Develop/public/assets/images/entered notes.png>)
+
 
 <br><br>
 ## Links
