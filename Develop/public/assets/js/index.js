@@ -5,8 +5,8 @@ let newNoteBtn;
 let noteList;
 
 if (window.location.pathname === '/notes') {
-  noteTitle = document.querySelector('.note-title');
-  noteText = document.querySelector('.note-textarea');
+  noteTitle = document.querySelector('#note-title');
+  noteText = document.querySelector('#note-text');
   saveNoteBtn = document.querySelector('.save-note');
   newNoteBtn = document.querySelector('.new-note');
   noteList = document.querySelector('.list-container .list-group');
@@ -90,7 +90,7 @@ const handleNoteDelete = (e) => {
   deleteNote(noteId)
     .then(() => {
       renderActiveNote();
-      getAndRenderNotes(); 
+      getAndRenderNotes();
     });
 };
 

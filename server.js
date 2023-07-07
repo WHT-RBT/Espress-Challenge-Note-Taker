@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,82 +10,57 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
-// API Routes
-app.get('/api/notes', (req, res) => {
-  const dbFilePath = path.join(__dirname, 'Develop', 'db', 'db.json');
-  fs.readFile(dbFilePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Failed to read notes from the database.' });
-    }
-    const notes = JSON.parse(data);
-    res.json(notes);
-  });
-});
-
-app.post('/api/notes', (req, res) => {
-  const dbFilePath = path.join(__dirname, 'Develop', 'db', 'db.json');
-  fs.readFile(dbFilePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Failed to read notes from the database.' });
-    }
-    const notes = JSON.parse(data);
-
-    const newNote = {
-      id: generateUniqueId(),
-      title: req.body.title,
-      text: req.body.text,
-    };
-
-    notes.push(newNote);
-
-    fs.writeFile(dbFilePath, JSON.stringify(notes), (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Failed to save the note to the database.' });
-      }
-      res.json(newNote);
-    });
-  });
-});
-
-app.delete('/api/notes/:id', (req, res) => {
-  const dbFilePath = path.join(__dirname, 'Develop', 'db', 'db.json');
-  fs.readFile(dbFilePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Failed to read notes from the database.' });
-    }
-    const notes = JSON.parse(data);
-
-    const noteId = req.params.id;
-    const index = notes.findIndex((note) => note.id === noteId);
-
-    if (index === -1) {
-      return res.status(404).json({ error: 'Note not found.' });
-    }
-
-    notes.splice(index, 1);
-
-    fs.writeFile(dbFilePath, JSON.stringify(notes), (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Failed to delete the note from the database.' });
-      }
-      res.sendStatus(204);
-    });
-  });
-});
-
 // HTML Routes
 app.get('/notes', (req, res) => {
-  res.sendFile(path.join(__dirname, 'Develop', 'public', 'notes.html'));
+  res.sendFile(path.join(__dirname, 'notes.html'));
 });
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'Develop', 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// API Routes
+app.get('/api/notes', (req, res) => {
+  const notes = getNotesFromDB();
+  res.json(notes);
+});
+
+app.post('/api/notes', (req, res) => {
+  const { title, text } = req.body;
+  const newNote = {
+    id: uuidv4(),
+    title,
+    text,
+  };
+
+  const notes = getNotesFromDB();
+  notes.push(newNote);
+  saveNotesToDB(notes);
+
+  res.json(newNote);
+});
+
+app.delete('/api/notes/:id', (req, res) => {
+  const { id } = req.params;
+
+  let notes = getNotesFromDB();
+  notes = notes.filter((note) => note.id !== id);
+  saveNotesToDB(notes);
+
+  res.sendStatus(204);
+});
+
+// Helper functions
+const getNotesFromDB = () => {
+  const dbFilePath = path.join(__dirname, 'Develop', 'db', 'db.json');
+  const data = fs.readFileSync(dbFilePath, 'utf8');
+  return JSON.parse(data);
+};
+
+const saveNotesToDB = (notes) => {
+  const dbFilePath = path.join(__dirname, 'Develop', 'db', 'db.json');
+  fs.writeFileSync(dbFilePath, JSON.stringify(notes));
+};
 
 // Start the server
 app.listen(PORT, () => {
